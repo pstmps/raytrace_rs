@@ -4,47 +4,67 @@
 mod color;
 mod vec3;
 mod ray;
+mod hittable;
+mod hittable_list;
+mod sphere;
+mod rtweekend;
 use color::Color;
 use vec3::Vec3;
 use vec3::Point3;
 use ray::Ray;
+use hittable::{Hittable, HitRecord};
+use hittable_list::HittableList;
+use sphere::Sphere;
+use rtweekend::{Shared, INFINITY_F64, PI, degrees_to_radians};
+
+
+
+use std::cmp::max;
 
 use std::fs::File;
 use std::io::{self, Write, BufWriter};
 
 use std::time::Duration;
 
-fn hit_sphere(center: Point3, radius: f64, r: Ray) -> f64 {
-    let oc: Vec3 = center - r.origin;
-    // let a: f64 = r.direction.dot(&r.direction);
-    // let b: f64 = -2.0 * r.direction.dot(&oc);
-    // let c: f64 = oc.dot(&oc) - radius * radius;
-    // let discriminant = b * b - 4.0 * a * c;
-    let a: f64 = r.direction.length_squared();
-    let h: f64 = oc.dot(&r.direction);
-    let c: f64 = oc.length_squared() - radius * radius;
-    let discriminant: f64 = h * h - a * c;
+// fn hit_sphere(center: Point3, radius: f64, r: Ray) -> f64 {
+//     let oc: Vec3 = center - r.origin;
+//     // let a: f64 = r.direction.dot(&r.direction);
+//     // let b: f64 = -2.0 * r.direction.dot(&oc);
+//     // let c: f64 = oc.dot(&oc) - radius * radius;
+//     // let discriminant = b * b - 4.0 * a * c;
+//     let a: f64 = r.direction.length_squared();
+//     let h: f64 = oc.dot(&r.direction);
+//     let c: f64 = oc.length_squared() - radius * radius;
+//     let discriminant: f64 = h * h - a * c;
 
-    if discriminant < 0.0 {
-        return -1.0
-    } else {
-        // return (-b - discriminant.sqrt()) / ( 2.0 * a)
-        return h - discriminant.sqrt() /  a
+//     if discriminant < 0.0 {
+//         return -1.0
+//     } else {
+//         // return (-b - discriminant.sqrt()) / ( 2.0 * a)
+//         return h - discriminant.sqrt() /  a
+//     }
+
+//     // return (discriminant >= 0.0)
+// }
+
+fn ray_color(r: Ray, world: &HittableList) -> Color {
+
+    if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
+        // shade by normal (rec.normal is a Vec3)
+        let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
+        return Color::from(shaded);
     }
 
-    // return (discriminant >= 0.0)
-}
 
-fn ray_color(r: Ray) -> Color {
     // if hit_sphere(Point3::new(0.0, 0.0, -1.0), 0.5, r) {
     //     return Color::new(0.0, 0.5, 0.7)
     // }
 
-    let t: f64 = hit_sphere(Point3::new(0.0, 0.0, -1.0), 0.5, r);
-    if t > 0.0 {
-        let N: Vec3 = (r.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
-        return color::Color(Color::new(N.x + 1.0, N.y + 1.0, N.z + 1.0).0 * 0.5)
-    }
+    // let t: f64 = hit_sphere(Point3::new(0.0, 0.0, -1.0), 0.5, r);
+    // if t > 0.0 {
+    //     let N: Vec3 = (r.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
+    //     return color::Color(Color::new(N.x + 1.0, N.y + 1.0, N.z + 1.0).0 * 0.5)
+    // }
 
     let unit_direction: Vec3 = r.direction.unit_vector();
     let a: f64 = 0.5 * (unit_direction.y + 1.0);
@@ -63,6 +83,15 @@ fn main() -> io::Result<()> {
     let aspect_ratio: f64 = 16.0 / 9.0;
     let image_width: usize = 400;
     let image_height: usize = ((image_width as f64 / aspect_ratio).max(1.0)) as usize;
+
+    // Worls
+
+    let mut world: HittableList = HittableList::new();
+
+    world.add(Box::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5)));
+    world.add(Box::new(crate::sphere::Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0)));
+
+    // Camera
 
     let focal_length: f64 = 1.0;
     let viewport_height: f64 = 2.0;
@@ -107,7 +136,7 @@ fn main() -> io::Result<()> {
             // let r = i as f64 / (image_width - 1) as f64;
             // let g = j as f64 / (image_height - 1) as f64;
             // let b = 0.5;
-            let pixel_color = ray_color(ray);
+            let pixel_color = ray_color(ray, &world);
             pixel_color.write_ppm(&mut out)?;
         }
     }
