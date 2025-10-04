@@ -6,3 +6,4 @@ pub mod hittable_list;
 pub mod sphere;
 pub mod rtweekend;
 pub mod camera;
+pub mod interval;

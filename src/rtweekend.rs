@@ -13,3 +13,13 @@ pub type Shared<T> = std::sync::Arc<T>;
 pub use crate::color::Color;
 pub use crate::ray::Ray;
 pub use crate::vec3::{Vec3, Point3};
+
+/// random in [0.0, 1.0)
+pub fn random_double() -> f64 {
+    rand::random::<f64>()
+}
+
+/// random in [min, max)
+pub fn random_double_range(min: f64, max: f64) -> f64 {
+    min + (max - min) * random_double()
+}
