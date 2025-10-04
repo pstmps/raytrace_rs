@@ -1,8 +1,10 @@
 use crate::hittable::{Hittable, HitRecord};
 use crate::ray::Ray;
+use crate::rtweekend::Shared;
+use std::sync::Arc;
 
 pub struct HittableList {
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Shared<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -10,7 +12,7 @@ impl HittableList {
     pub fn with_capacity(cap: usize) -> Self { Self { objects: Vec::with_capacity(cap) } }
 
     /// push a boxed trait object
-    pub fn add(&mut self, object: Box<dyn Hittable>) {
+    pub fn add(&mut self, object: Shared<dyn Hittable>) {
         self.objects.push(object);
     }
 
@@ -19,7 +21,7 @@ impl HittableList {
     where
         T: Hittable + 'static,
     {
-        self.objects.push(Box::new(v));
+        self.objects.push(Arc::new(v));
     }
 
     pub fn clear(&mut self) { self.objects.clear() }
