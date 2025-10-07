@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Sub, Mul, Div, Neg, Deref, DerefMut};
 
+use crate::rtweekend::{random_double, random_double_range};
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     pub x: f64,
@@ -40,6 +42,18 @@ impl Vec3 {
             self.x.clamp(min, max),
             self.y.clamp(min, max),
             self.z.clamp(min, max),
+        )
+    }
+
+    pub fn random() -> Self {
+        Self::new(random_double(), random_double(), random_double())
+    }
+
+    pub fn random_range(min: f64, max: f64) -> Self {
+        Self::new(
+            random_double_range(min, max),
+            random_double_range(min, max),
+            random_double_range(min, max),
         )
     }
 }

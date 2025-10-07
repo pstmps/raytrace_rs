@@ -33,7 +33,7 @@ use std::time::Duration;
 
 fn main() -> io::Result<()> {
 
-
+    let multithreaded = std::env::args().any(|arg| arg == "--mt" || arg == "-mt");
     // Worls
 
     let mut world: HittableList = HittableList::new();
@@ -46,7 +46,16 @@ fn main() -> io::Result<()> {
     // cam.aspect_ratio = 4.0 / 3.0;
 
     let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100);
-    cam.render(&world)?;
+
+    if multithreaded {
+        eprintln!("Rendering multithreaded...");
+        cam.render_multithreaded(&world)?;
+    } else {
+        eprintln!("Rendering single-threaded...");
+        cam.render(&world)?;
+    }
+    // cam.render(&world)?;
+
 
     Ok(())
 }

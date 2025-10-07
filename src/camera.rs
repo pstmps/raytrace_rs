@@ -10,6 +10,10 @@ use crate::ray::Ray;
 use crate::hittable::{Hittable, HitRecord};
 use crate::hittable_list::HittableList;
 
+use rayon::iter::IntoParallelIterator;
+use rayon::prelude::*;
+
+use std::time::Instant;
 
 pub struct Camera {
 
@@ -86,7 +90,60 @@ impl Camera{
 
     }
 
+        pub fn render_multithreaded(&mut self, world: &HittableList) -> io::Result<()> {
+            self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+
+            let file = File::create("image.ppm")?;
+            let mut out = BufWriter::new(file);
+            writeln!(out, "P3")?;
+            writeln!(out, "{} {}", self.image_width, self.image_height)?;
+            writeln!(out, "255")?;
+
+            // copy small hot values into locals so parallel closure captures cheap copies
+            let image_w = self.image_width;
+            let image_h = self.image_height;
+            let samples = self.samples_per_pixel;
+            let sample_scale = self.pixel_sample_scale;
+            let center = self.center;
+            let pixel00 = self.pixel00_loc;
+            let du = self.pixel_delta_u;
+            let dv = self.pixel_delta_v;
+            let start = Instant::now();
+            // compute each scanline in parallel (coarse-grain)
+            let rows: Vec<String> = (0..image_h)
+                .into_par_iter()
+                .map(|j| {
+                    let mut row_buf = String::with_capacity(image_w * 12);
+                    for i in 0..image_w {
+                        // per-pixel: do samples sequentially (avoids tiny rayon tasks)
+                        let sum = (0..samples).fold(Color::new(0.0, 0.0, 0.0), |acc, _| {
+                            let r = Self::get_ray(center, pixel00, du, dv, i, j);
+                            acc + Self::ray_color(r, world)
+                        });
+
+                        let pixel = sum * sample_scale;
+                        // convert to integer RGB components
+                        let ppm_string = pixel.to_ppm_string();
+                        row_buf.push_str(&ppm_string);
+
+                    }
+                    row_buf
+                })
+                .collect();
+
+            // write rows sequentially to avoid IO contention
+            for row in rows {
+                out.write_all(row.as_bytes())?;
+            }
+
+            out.flush()?;
+            eprintln!("Wrote image.ppm ({}x{}) {:?}", image_w, image_h, start.elapsed());
+            Ok(())
+        }
+
+
     pub fn render(&mut self, world: &HittableList) -> io::Result<()> {
+        let mut scanline_times: Vec<std::time::Duration> = Vec::with_capacity(self.image_height);
 
         self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
         // Open output file
@@ -108,12 +165,14 @@ impl Camera{
             // sleep(Duration::from_millis(1));
             write!(err, "\rScanlines remaining: {:>3}", self.image_height - j)?;
             err.flush()?;
+            let start = Instant::now();
             for i in 0..self.image_width {
 
                 let mut pixel_color = Color::new(0.0,0.0,0.0);
+
                 for sample in 0..self.samples_per_pixel {
-                    let r = self.get_ray(i,j);
-                    pixel_color += self.ray_color(r, &world);
+                    let r = Self::get_ray(self.center, self.pixel00_loc, self.pixel_delta_u, self.pixel_delta_v, i, j);
+                    pixel_color += Self::ray_color(r, &world);
                 }
 
                 pixel_color = pixel_color * self.pixel_sample_scale;
@@ -127,35 +186,47 @@ impl Camera{
                 // // let g = j as f64 / (image_height - 1) as f64;
                 // // let b = 0.5;
                 // let pixel_color = Self::ray_color(ray, &world);
-                pixel_color.write_ppm(&mut out)?;
+                // pixel_color.write_ppm(&mut out)?;
+                let ppm_string = pixel_color.to_ppm_string();
+                out.write_all(ppm_string.as_bytes())?;
             }
+            scanline_times.push(start.elapsed());
         }
 
 
         out.flush()?;
-        // finish the progress line and move to the next line
+
+
+
         writeln!(err)?;
         eprintln!("Wrote image.ppm ({}x{})", self.image_width, self.image_height);
+        let total: std::time::Duration = scanline_times.iter().copied().sum();
+       let avg = if !scanline_times.is_empty() {
+           total / (scanline_times.len() as u32)
+       } else {
+           std::time::Duration::ZERO
+       };
+       eprintln!("mrender: wrote image.ppm ({}x{}). total={:?} avg_per_scanline={:?}", self.image_width, self.image_height, total, avg);
         Ok(())
     }
 
-    fn get_ray(&self, i: usize, j: usize) -> Ray {
-        let offset = self.sample_square();
+    fn get_ray(center: Point3, pixel00: Point3, pixel_delta_u: Vec3, pixel_delta_v: Vec3,i: usize, j: usize) -> Ray {
+        let offset = Self::sample_square();
 
-        let pixel_sample = self.pixel00_loc + ((i as f64 + offset.x) as f64 * self.pixel_delta_u) + ((j as f64 + offset.y) as f64 * self.pixel_delta_v);
+        let pixel_sample = pixel00 + ((i as f64 + offset.x) as f64 * pixel_delta_u) + ((j as f64 + offset.y) as f64 * pixel_delta_v);
 
-        let ray_origin = self.center;
+        let ray_origin = center;
         let ray_direction = pixel_sample - ray_origin;
 
         return Ray::new(ray_origin, ray_direction)
 
     }
 
-    fn sample_square(&self) -> Vec3 {
+    fn sample_square() -> Vec3 {
         return Vec3::new(random_double() - 0.5, random_double() - 0.5, 0.0)
     }
 
-    fn ray_color(&self, r: Ray, world: &HittableList) -> Color {
+    fn ray_color(r: Ray, world: &HittableList) -> Color {
 
         if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
             // shade by normal (rec.normal is a Vec3)

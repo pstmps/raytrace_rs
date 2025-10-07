@@ -37,6 +37,11 @@ impl Color {
         let (r, g, b) = self.to_rgb_i32();
         writeln!(out, "{} {} {}", r, g, b)
     }
+
+    pub fn to_ppm_string(&self) -> String {
+        let (r, g, b) = self.to_rgb_i32();
+        format!("{} {} {}\n", r, g, b)
+    }
 }
 
 // allow `Color + Color`
