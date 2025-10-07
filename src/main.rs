@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
     // cam.image_width = 800;
     // cam.aspect_ratio = 4.0 / 3.0;
 
-    let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100);
+    let mut cam = Camera::new_with(280, 16.0 / 9.0, 100, 50);
 
     if multithreaded {
         eprintln!("Rendering multithreaded...");

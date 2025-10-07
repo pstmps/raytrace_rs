@@ -37,6 +37,26 @@ impl Vec3 {
 
     pub fn unit_vector(&self) -> Self { *self / self.length() }
 
+    pub fn random_unit_vector() -> Self {
+        loop {
+            let p = Vec3::random();
+            let length_squared = p.length_squared();
+            if length_squared <= 1.0 && length_squared > 1e-160 {
+                return p / length_squared.sqrt();
+            }
+        }
+    }
+
+    pub fn random_on_hemisphere(normal: &Vec3) -> Vec3{
+        let on_unit_sphere = Vec3::random_unit_vector();
+        if on_unit_sphere.dot(&normal) > 0.0 {
+            return on_unit_sphere;
+        }
+        else {
+            return -on_unit_sphere;
+        }
+    }
+
     pub fn clamp(&self, min: f64, max: f64) -> Self {
         Self::new(
             self.x.clamp(min, max),

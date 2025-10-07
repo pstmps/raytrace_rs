@@ -20,6 +20,7 @@ pub struct Camera {
     pub aspect_ratio: f64,
     pub image_width: usize,
     pub samples_per_pixel: usize,
+    pub max_depth: usize,
     pixel_sample_scale: f64,
     image_height: usize,
     center: Point3,
@@ -34,10 +35,12 @@ impl Default for Camera {
         let aspect_ratio = 16.0 / 9.0;
         let image_width = 400usize;
         let samples_per_pixel = 10usize;
+        let max_depth = 10usize;
         Self {
             aspect_ratio,
             image_width,
             samples_per_pixel,
+            max_depth,
             pixel_sample_scale: 1.0,
             image_height: 0, // will be computed in initialize()
             center: Point3::new(0.0, 0.0, 0.0),
@@ -50,11 +53,12 @@ impl Default for Camera {
 
 impl Camera{
 
-    pub fn new_with(image_width: usize, aspect_ratio: f64, samples_per_pixel: usize) -> Self {
+    pub fn new_with(image_width: usize, aspect_ratio: f64, samples_per_pixel: usize, max_depth: usize) -> Self {
         let mut c = Self::default();
         c.image_width = image_width;
         c.aspect_ratio = aspect_ratio;
         c.samples_per_pixel = samples_per_pixel;
+        c.max_depth = max_depth;
         c
     }
 
@@ -91,53 +95,53 @@ impl Camera{
     }
 
         pub fn render_multithreaded(&mut self, world: &HittableList) -> io::Result<()> {
-            self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+            // self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
 
-            let file = File::create("image.ppm")?;
-            let mut out = BufWriter::new(file);
-            writeln!(out, "P3")?;
-            writeln!(out, "{} {}", self.image_width, self.image_height)?;
-            writeln!(out, "255")?;
+            // let file = File::create("image.ppm")?;
+            // let mut out = BufWriter::new(file);
+            // writeln!(out, "P3")?;
+            // writeln!(out, "{} {}", self.image_width, self.image_height)?;
+            // writeln!(out, "255")?;
 
-            // copy small hot values into locals so parallel closure captures cheap copies
-            let image_w = self.image_width;
-            let image_h = self.image_height;
-            let samples = self.samples_per_pixel;
-            let sample_scale = self.pixel_sample_scale;
-            let center = self.center;
-            let pixel00 = self.pixel00_loc;
-            let du = self.pixel_delta_u;
-            let dv = self.pixel_delta_v;
-            let start = Instant::now();
-            // compute each scanline in parallel (coarse-grain)
-            let rows: Vec<String> = (0..image_h)
-                .into_par_iter()
-                .map(|j| {
-                    let mut row_buf = String::with_capacity(image_w * 12);
-                    for i in 0..image_w {
-                        // per-pixel: do samples sequentially (avoids tiny rayon tasks)
-                        let sum = (0..samples).fold(Color::new(0.0, 0.0, 0.0), |acc, _| {
-                            let r = Self::get_ray(center, pixel00, du, dv, i, j);
-                            acc + Self::ray_color(r, world)
-                        });
+            // // copy small hot values into locals so parallel closure captures cheap copies
+            // let image_w = self.image_width;
+            // let image_h = self.image_height;
+            // let samples = self.samples_per_pixel;
+            // let sample_scale = self.pixel_sample_scale;
+            // let center = self.center;
+            // let pixel00 = self.pixel00_loc;
+            // let du = self.pixel_delta_u;
+            // let dv = self.pixel_delta_v;
+            // let start = Instant::now();
+            // // compute each scanline in parallel (coarse-grain)
+            // let rows: Vec<String> = (0..image_h)
+            //     .into_par_iter()
+            //     .map(|j| {
+            //         let mut row_buf = String::with_capacity(image_w * 12);
+            //         for i in 0..image_w {
+            //             // per-pixel: do samples sequentially (avoids tiny rayon tasks)
+            //             let sum = (0..samples).fold(Color::new(0.0, 0.0, 0.0), |acc, _| {
+            //                 let r = Self::get_ray(center, pixel00, du, dv, i, j);
+            //                 acc + Self::ray_color(r, world)
+            //             });
 
-                        let pixel = sum * sample_scale;
-                        // convert to integer RGB components
-                        let ppm_string = pixel.to_ppm_string();
-                        row_buf.push_str(&ppm_string);
+            //             let pixel = sum * sample_scale;
+            //             // convert to integer RGB components
+            //             let ppm_string = pixel.to_ppm_string();
+            //             row_buf.push_str(&ppm_string);
 
-                    }
-                    row_buf
-                })
-                .collect();
+            //         }
+            //         row_buf
+            //     })
+            //     .collect();
 
-            // write rows sequentially to avoid IO contention
-            for row in rows {
-                out.write_all(row.as_bytes())?;
-            }
+            // // write rows sequentially to avoid IO contention
+            // for row in rows {
+            //     out.write_all(row.as_bytes())?;
+            // }
 
-            out.flush()?;
-            eprintln!("Wrote image.ppm ({}x{}) {:?}", image_w, image_h, start.elapsed());
+            // out.flush()?;
+            // eprintln!("Wrote image.ppm ({}x{}) {:?}", image_w, image_h, start.elapsed());
             Ok(())
         }
 
@@ -172,7 +176,7 @@ impl Camera{
 
                 for sample in 0..self.samples_per_pixel {
                     let r = Self::get_ray(self.center, self.pixel00_loc, self.pixel_delta_u, self.pixel_delta_v, i, j);
-                    pixel_color += Self::ray_color(r, &world);
+                    pixel_color += Self::ray_color(r, self.max_depth, &world);
                 }
 
                 pixel_color = pixel_color * self.pixel_sample_scale;
@@ -226,12 +230,17 @@ impl Camera{
         return Vec3::new(random_double() - 0.5, random_double() - 0.5, 0.0)
     }
 
-    fn ray_color(r: Ray, world: &HittableList) -> Color {
+    fn ray_color(r: Ray, depth: usize, world: &HittableList) -> Color {
+
+        if (depth <= 0) { return Color::new(0.0,0.0,0.0)}
 
         if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
             // shade by normal (rec.normal is a Vec3)
-            let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
-            return Color::from(shaded);
+            // let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
+            // return Color::from(shaded);
+
+            let direction = Vec3::random_on_hemisphere(&rec.normal);
+            return Camera::ray_color(Ray::new(rec.p, direction), depth - 1, &world) * 0.5
         }
 
         let unit_direction: Vec3 = r.direction.unit_vector();
