@@ -21,15 +21,26 @@ impl Color {
     pub fn g(&self) -> f64 { self.0.y }
     pub fn b(&self) -> f64 { self.0.z }
 
+    pub fn linear_to_gamma(linear_component: f64) -> f64 {
+        if linear_component > 0.0 {
+            return linear_component.sqrt()
+        }
+        return 0.0
+    }
+
     pub fn clamp(&self, min: f64, max: f64) -> Self {
         Self(self.0.clamp(min, max))
     }
 
     pub fn to_rgb_i32(&self) -> (i32, i32, i32) {
+        // let mut r = Self::linear_to_gamma(self.r());
+        // let mut g = Self::linear_to_gamma(self.g());
+        // let mut b = Self::linear_to_gamma(self.b());
+
         let intensity = Interval::new(0.000, 0.999);
-        let r = (256.0 * intensity.clamp(self.r())) as i32;
-        let g = (256.0 * intensity.clamp(self.g())) as i32;
-        let b = (256.0 * intensity.clamp(self.b())) as i32;
+        let r = (256.0 * intensity.clamp(Self::linear_to_gamma(self.r()))) as i32;
+        let g = (256.0 * intensity.clamp(Self::linear_to_gamma(self.g()))) as i32;
+        let b = (256.0 * intensity.clamp(Self::linear_to_gamma(self.b()))) as i32;
         (r, g, b)
     }
 

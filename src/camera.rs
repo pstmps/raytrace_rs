@@ -239,8 +239,8 @@ impl Camera{
             // let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
             // return Color::from(shaded);
 
-            let direction = Vec3::random_on_hemisphere(&rec.normal);
-            return Camera::ray_color(Ray::new(rec.p, direction), depth - 1, &world) * 0.5
+            let direction = rec.normal + Vec3::random_on_hemisphere(&rec.normal);
+            return Camera::ray_color(Ray::new(rec.p, direction), depth - 1, &world) * 0.1
         }
 
         let unit_direction: Vec3 = r.direction.unit_vector();
