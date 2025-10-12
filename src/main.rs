@@ -10,6 +10,7 @@ mod sphere;
 mod rtweekend;
 mod camera;
 mod interval;
+mod material;
 use color::Color;
 use vec3::Vec3;
 use vec3::Point3;
@@ -19,6 +20,7 @@ use hittable_list::HittableList;
 use sphere::Sphere;
 use rtweekend::{Shared, INFINITY_F64, PI, degrees_to_radians};
 use camera::Camera;
+use material::{Lambertian,Metal};
 
 use std::sync::Arc;
 
@@ -38,14 +40,21 @@ fn main() -> io::Result<()> {
 
     let mut world: HittableList = HittableList::new();
 
-    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5)));
-    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0)));
+    let mat_ground = Shared::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+    let mat_center = Shared::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
+    let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8)));
+    let mat_right  = Shared::new(Metal::new(Color::new(0.8, 0.6, 0.2)));
+
+    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, mat_center)));
+    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0, mat_ground)));
+    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.5, mat_left)));
+    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5, mat_right)));
 
     // let mut cam = Camera::default();
     // cam.image_width = 800;
     // cam.aspect_ratio = 4.0 / 3.0;
 
-    let mut cam = Camera::new_with(280, 16.0 / 9.0, 100, 50);
+    let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100, 500);
 
     if multithreaded {
         eprintln!("Rendering multithreaded...");

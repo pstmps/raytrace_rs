@@ -7,3 +7,4 @@ pub mod sphere;
 pub mod rtweekend;
 pub mod camera;
 pub mod interval;
+pub mod material;

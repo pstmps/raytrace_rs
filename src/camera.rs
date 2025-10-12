@@ -95,53 +95,56 @@ impl Camera{
     }
 
         pub fn render_multithreaded(&mut self, world: &HittableList) -> io::Result<()> {
-            // self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+            self.initialize().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
 
-            // let file = File::create("image.ppm")?;
-            // let mut out = BufWriter::new(file);
-            // writeln!(out, "P3")?;
-            // writeln!(out, "{} {}", self.image_width, self.image_height)?;
-            // writeln!(out, "255")?;
+            let file = File::create("image.ppm")?;
+            let mut out = BufWriter::new(file);
+            writeln!(out, "P3")?;
+            writeln!(out, "{} {}", self.image_width, self.image_height)?;
+            writeln!(out, "255")?;
 
-            // // copy small hot values into locals so parallel closure captures cheap copies
-            // let image_w = self.image_width;
-            // let image_h = self.image_height;
-            // let samples = self.samples_per_pixel;
-            // let sample_scale = self.pixel_sample_scale;
-            // let center = self.center;
-            // let pixel00 = self.pixel00_loc;
-            // let du = self.pixel_delta_u;
-            // let dv = self.pixel_delta_v;
-            // let start = Instant::now();
-            // // compute each scanline in parallel (coarse-grain)
-            // let rows: Vec<String> = (0..image_h)
-            //     .into_par_iter()
-            //     .map(|j| {
-            //         let mut row_buf = String::with_capacity(image_w * 12);
-            //         for i in 0..image_w {
-            //             // per-pixel: do samples sequentially (avoids tiny rayon tasks)
-            //             let sum = (0..samples).fold(Color::new(0.0, 0.0, 0.0), |acc, _| {
-            //                 let r = Self::get_ray(center, pixel00, du, dv, i, j);
-            //                 acc + Self::ray_color(r, world)
-            //             });
+            // copy small hot values into locals so parallel closure captures cheap copies
+            let image_w = self.image_width;
+            let image_h = self.image_height;
+            let samples = self.samples_per_pixel;
+            let sample_scale = self.pixel_sample_scale;
+            let center = self.center;
+            let pixel00 = self.pixel00_loc;
+            let du = self.pixel_delta_u;
+            let dv = self.pixel_delta_v;
+            let max_depth = self.max_depth;
 
-            //             let pixel = sum * sample_scale;
-            //             // convert to integer RGB components
-            //             let ppm_string = pixel.to_ppm_string();
-            //             row_buf.push_str(&ppm_string);
 
-            //         }
-            //         row_buf
-            //     })
-            //     .collect();
+            let start = Instant::now();
+            // compute each scanline in parallel (coarse-grain)
+            let rows: Vec<String> = (0..image_h)
+                .into_par_iter()
+                .map(|j| {
+                    let mut row_buf = String::with_capacity(image_w * 12);
+                    for i in 0..image_w {
+                        // per-pixel: do samples sequentially (avoids tiny rayon tasks)
+                        let sum = (0..samples).fold(Color::new(0.0, 0.0, 0.0), |acc, _| {
+                            let r = Self::get_ray(center, pixel00, du, dv, i, j);
+                            acc + Self::ray_color(r, max_depth, world)
+                        });
 
-            // // write rows sequentially to avoid IO contention
-            // for row in rows {
-            //     out.write_all(row.as_bytes())?;
-            // }
+                        let pixel = sum * sample_scale;
+                        // convert to integer RGB components
+                        let ppm_string = pixel.to_ppm_string();
+                        row_buf.push_str(&ppm_string);
 
-            // out.flush()?;
-            // eprintln!("Wrote image.ppm ({}x{}) {:?}", image_w, image_h, start.elapsed());
+                    }
+                    row_buf
+                })
+                .collect();
+
+            // write rows sequentially to avoid IO contention
+            for row in rows {
+                out.write_all(row.as_bytes())?;
+            }
+
+            out.flush()?;
+            eprintln!("Wrote image.ppm ({}x{}) {:?}", image_w, image_h, start.elapsed());
             Ok(())
         }
 
@@ -234,13 +237,29 @@ impl Camera{
 
         if (depth <= 0) { return Color::new(0.0,0.0,0.0)}
 
-        if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
-            // shade by normal (rec.normal is a Vec3)
-            // let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
-            // return Color::from(shaded);
+        // if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
+        //     // shade by normal (rec.normal is a Vec3)
+        //     // let shaded = 0.5 * (rec.normal + Vec3::new(1.0, 1.0, 1.0));
+        //     // return Color::from(shaded);
 
-            let direction = rec.normal + Vec3::random_on_hemisphere(&rec.normal);
-            return Camera::ray_color(Ray::new(rec.p, direction), depth - 1, &world) * 0.1
+        //     let direction = rec.normal + Vec3::random_on_hemisphere(&rec.normal);
+        //     return Camera::ray_color(Ray::new(rec.p, direction), depth - 1, &world) * 0.1
+        // }
+
+        if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
+            // Try to scatter via the material on the hit record.
+            // `scatter` should return Some((attenuation_color, scattered_ray)) or None.
+            if let Some((attenuation, scattered)) = rec.mat.scatter(&r, &rec) {
+                let scattered_color = Self::ray_color(scattered, depth - 1, world);
+                // component-wise multiply attenuation * scattered_color
+                return Color::new(
+                    attenuation.0.x * scattered_color.0.x,
+                    attenuation.0.y * scattered_color.0.y,
+                    attenuation.0.z * scattered_color.0.z,
+                );
+            }
+            // material absorbed the ray
+            return Color::new(0.0, 0.0, 0.0);
         }
 
         let unit_direction: Vec3 = r.direction.unit_vector();

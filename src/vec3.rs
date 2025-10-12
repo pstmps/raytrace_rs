@@ -19,6 +19,11 @@ impl Vec3 {
 
     pub fn zero() -> Self { Self::new(0.0, 0.0, 0.0) }
 
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        (self.x.abs() < s) && (self.y.abs() < s) && (self.z.abs() < s)
+    }
+
     pub fn dot(&self, other: &Self) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
@@ -55,6 +60,10 @@ impl Vec3 {
         else {
             return -on_unit_sphere;
         }
+    }
+
+    pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+        *v - 2.0 * v.dot(n) * *n
     }
 
     pub fn clamp(&self, min: f64, max: f64) -> Self {

@@ -3,6 +3,8 @@ use crate::ray::Ray;
 use crate::rtweekend::Shared;
 use std::sync::Arc;
 
+use crate::material::MaterialPtr;
+
 pub struct HittableList {
     pub objects: Vec<Shared<dyn Hittable>>,
 }
