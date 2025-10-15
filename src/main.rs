@@ -42,8 +42,8 @@ fn main() -> io::Result<()> {
 
     let mat_ground = Shared::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
     let mat_center = Shared::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
-    let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8)));
-    let mat_right  = Shared::new(Metal::new(Color::new(0.8, 0.6, 0.2)));
+    let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let mat_right  = Shared::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, mat_center)));
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0, mat_ground)));
@@ -54,7 +54,8 @@ fn main() -> io::Result<()> {
     // cam.image_width = 800;
     // cam.aspect_ratio = 4.0 / 3.0;
 
-    let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100, 500);
+    // let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100, 500);
+    let mut cam = Camera::new_with(640, 16.0 / 9.0, 10, 50);
 
     if multithreaded {
         eprintln!("Rendering multithreaded...");
