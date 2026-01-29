@@ -1,5 +1,5 @@
 pub const INFINITY_F64: f64 = f64::INFINITY;
-pub const PI: f64 = 3.1415926535897932385;
+pub const PI: f64 = f64::consts::PI; ///3.141_592_653_589_793;
 
 #[inline]
 pub fn degrees_to_radians(deg: f64) -> f64 {
@@ -8,6 +8,8 @@ pub fn degrees_to_radians(deg: f64) -> f64 {
 
 /// Shared pointer alias similar to std::shared_ptr in C++
 pub type Shared<T> = std::sync::Arc<T>;
+
+use core::f64;
 
 /// Common re-exports (optional, convenience)
 pub use crate::color::Color;

@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/raytrace_rs:cached
+      # Cache cargo registry and git for faster rebuilds
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+    working_dir: /workspaces/raytrace_rs
+    command: bash -lc "sleep infinity"
+    # Uncomment to run the application on startup:
+    # command: bash -lc "cargo run --release"
+
+volumes:
+  cargo-cache:
+  cargo-git:

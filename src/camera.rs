@@ -235,7 +235,7 @@ impl Camera{
 
     fn ray_color(r: Ray, depth: usize, world: &HittableList) -> Color {
 
-        if depth <= 0 { return Color::new(0.0,0.0,0.0)}
+        if depth == 0 { return Color::new(0.0,0.0,0.0)}
 
         // if let Some(rec) = world.hit(&r, 0.001, INFINITY_F64) {
         //     // shade by normal (rec.normal is a Vec3)
