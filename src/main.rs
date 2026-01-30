@@ -12,6 +12,7 @@ mod camera;
 mod interval;
 mod material;
 use color::Color;
+
 use vec3::Vec3;
 use vec3::Point3;
 use ray::Ray;
@@ -20,7 +21,7 @@ use hittable_list::HittableList;
 use sphere::Sphere;
 use rtweekend::{Shared, INFINITY_F64, PI, degrees_to_radians};
 use camera::Camera;
-use material::{Lambertian,Metal};
+use material::{Lambertian,Metal, Dielectric};
 
 use std::sync::Arc;
 
@@ -42,7 +43,8 @@ fn main() -> io::Result<()> {
 
     let mat_ground = Shared::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
     let mat_center = Shared::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
-    let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    // let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let mat_left = Shared::new(Dielectric::new(1.00 / 1.33));
     let mat_right  = Shared::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, mat_center)));
