@@ -3,7 +3,7 @@ use crate::ray::Ray;
 use crate::hittable::HitRecord;
 use crate::color::Color;
 use crate::vec3::{Vec3, Point3};
-use crate::rtweekend::Shared;
+use crate::rtweekend::{Shared, random_double};
 
 /// object-safe trait representing a material (like a C++ abstract base)
 pub trait Material: Send + Sync {
@@ -66,6 +66,13 @@ pub struct Dielectric {
 }
 impl Dielectric {
     pub fn new(refraction_index: f64) -> Self { Self { refraction_index: refraction_index } }
+
+    fn reflectance(&self, cosine: f64, refraction_index: f64) -> f64 {
+        let r0 = (( 1.0 - refraction_index) / ( 1.0 + refraction_index)).sqrt();
+
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+    }
+
 }
 impl Material for Dielectric {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
@@ -74,15 +81,16 @@ impl Material for Dielectric {
         let unit_direction = r_in.direction.unit_vector();
 
         let cos_theta = (-unit_direction).dot(&rec.normal).min(1.0);
-        let sin_theta = (1.0 - cos_theta.sqrt()).sqrt();
+        let sin_theta = (1.0 - (cos_theta.sqrt())).sqrt();
 
         let direction = match (ri * sin_theta) {
-            x if x > 1.0 => Vec3::reflect(&unit_direction, &rec.normal),
+            x if x > 1.0 || self.reflectance(cos_theta, ri) > random_double() => Vec3::reflect(&unit_direction, &rec.normal),
             _ => Vec3::refract(&unit_direction, &rec.normal, ri),
         };
 
         let scattered = Ray::new(rec.p, direction);
         Some((attenuation, scattered))
     }
+
 
 }

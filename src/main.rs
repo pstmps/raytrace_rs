@@ -44,12 +44,15 @@ fn main() -> io::Result<()> {
     let mat_ground = Shared::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
     let mat_center = Shared::new(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
     // let mat_left   = Shared::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
-    let mat_left = Shared::new(Dielectric::new(1.00 / 1.33));
+    let mat_left = Shared::new(Dielectric::new((1.50)));
+    let mat_bubble = Shared::new(Dielectric::new(1.00 / 1.50));
     let mat_right  = Shared::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5, mat_center)));
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0, mat_ground)));
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.5, mat_left)));
+    world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.4, mat_bubble)));
+
     world.add(Shared::new(crate::sphere::Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5, mat_right)));
 
     // let mut cam = Camera::default();
@@ -57,7 +60,11 @@ fn main() -> io::Result<()> {
     // cam.aspect_ratio = 4.0 / 3.0;
 
     // let mut cam = Camera::new_with(1280, 16.0 / 9.0, 100, 500);
-    let mut cam = Camera::new_with(640, 16.0 / 9.0, 10, 50);
+    let mut cam = Camera::new_with(
+        640, 
+        16.0 / 9.0, 
+        50,
+        50);
 
     if multithreaded {
         eprintln!("Rendering multithreaded...");
