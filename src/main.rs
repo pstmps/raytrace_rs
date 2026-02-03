@@ -64,7 +64,13 @@ fn main() -> io::Result<()> {
         640, 
         16.0 / 9.0, 
         50,
-        50);
+        50,
+        90.0);
+
+    cam.vfov = 20.0;
+    cam.lookfrom = Point3::new(-2.0, 2.0, 1.0);
+    cam.lookat = Point3::new(0.0, 0.0, -1.0);
+    cam.vup = Vec3::new(0.0, 1.0, 0.0);
 
     if multithreaded {
         eprintln!("Rendering multithreaded...");
