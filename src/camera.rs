@@ -284,11 +284,12 @@ impl Camera{
             if let Some((attenuation, scattered)) = rec.mat.scatter(&r, &rec) {
                 let scattered_color = Self::ray_color(scattered, depth - 1, world);
                 // component-wise multiply attenuation * scattered_color
-                return Color::new(
-                    attenuation.0.x * scattered_color.0.x,
-                    attenuation.0.y * scattered_color.0.y,
-                    attenuation.0.z * scattered_color.0.z,
-                );
+                // return Color::new(
+                //     attenuation.0.x * scattered_color.0.x,
+                //     attenuation.0.y * scattered_color.0.y,
+                //     attenuation.0.z * scattered_color.0.z,
+                // );
+                return attenuation * scattered_color;
             }
             // material absorbed the ray
             return Color::new(0.0, 0.0, 0.0);

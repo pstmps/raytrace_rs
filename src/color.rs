@@ -41,6 +41,14 @@ impl Color {
         let r = (256.0 * intensity.clamp(Self::linear_to_gamma(self.r()))) as i32;
         let g = (256.0 * intensity.clamp(Self::linear_to_gamma(self.g()))) as i32;
         let b = (256.0 * intensity.clamp(Self::linear_to_gamma(self.b()))) as i32;
+
+        // let r = self.r().clamp(0.0, 1.0); // ensure [0,1] range
+        // let g = self.g().clamp(0.0, 1.0);
+        // let b = self.b().clamp(0.0, 1.0);
+
+        // let r = Self::linear_to_gamma(r) as i32;
+        // let g = Self::linear_to_gamma(g) as i32;
+        // let b = Self::linear_to_gamma(b) as i32;
         (r, g, b)
     }
 
@@ -77,6 +85,20 @@ impl Mul<f64> for Color {
     fn mul(self, rhs: f64) -> Self::Output {
         Color(self.0 * rhs)
     }
+}
+
+impl Mul<Color> for Color {
+    type Output = Color;
+    fn mul(self, rhs: Color) -> Self::Output {
+        Color(
+            Vec3::new(
+                self.r() * rhs.r(),
+                self.g() * rhs.g(),
+                self.b() * rhs.b(),
+            )
+        )
+    }
+    
 }
 
 // allow `Color / f64`

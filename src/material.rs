@@ -58,7 +58,7 @@ impl Material for Metal {
         }
         // Some((self.albedo, scattered))
     }
-}
+}            
 
 pub struct Dielectric {
     pub refraction_index: f64
