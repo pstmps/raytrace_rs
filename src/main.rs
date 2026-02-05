@@ -63,8 +63,8 @@ fn main() -> io::Result<()> {
     let mut cam = Camera::new_with(
         640, 
         16.0 / 9.0, 
-        80,
-        20,
+        100,
+        50,
         90.0);
 
     cam.vfov = 20.0;

@@ -42,9 +42,10 @@ impl Vec3 {
 
     pub fn unit_vector(&self) -> Self { *self / self.length() }
 
+
     pub fn random_unit_vector() -> Self {
         loop {
-            let p = Vec3::random();
+            let p = Vec3::random_range(-1.0, 1.0);
             let length_squared = p.length_squared();
             if length_squared <= 1.0 && length_squared > 1e-160 {
                 return p / length_squared.sqrt();
