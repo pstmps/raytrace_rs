@@ -42,6 +42,15 @@ impl Vec3 {
 
     pub fn unit_vector(&self) -> Self { *self / self.length() }
 
+    pub fn random_in_unit_disk() -> Self {
+        loop {
+            let mut p = Vec3::random_range(-1.0, 1.0);
+            p.z = 0.0;
+            if p.length_squared() < 1.0 {
+                return p
+            }
+        }
+    }
 
     pub fn random_unit_vector() -> Self {
         loop {

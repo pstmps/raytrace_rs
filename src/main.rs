@@ -72,6 +72,9 @@ fn main() -> io::Result<()> {
     cam.lookat = Point3::new(0.0, 0.0, -1.0);
     cam.vup = Vec3::new(0.0, 1.0, 0.0);
 
+    cam.defocus_angle = 10.0;
+    cam.focus_dist = 3.4;
+
     if multithreaded {
         eprintln!("Rendering multithreaded...");
         cam.render_multithreaded(&world)?;
